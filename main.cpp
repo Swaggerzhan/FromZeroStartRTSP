@@ -1,5 +1,4 @@
-#include "include/tcp.h"
-#include "include/udp.h"
+#include "test/include/basic_rtsp_2.h"
 
 #define LOCAL_ADDR "0.0.0.0"
 #define RTSP_PORT   8888
@@ -8,7 +7,5 @@
 
 
 int main() {
-    Tcp rtsp(LOCAL_ADDR, RTSP_PORT);
-    Udp rtp(LOCAL_ADDR, RTP_PORT);
-    Udp rtcp(LOCAL_ADDR, RTCP_PORT);
+    basic2_entry();
 }

@@ -30,9 +30,33 @@ RTSP::~RTSP() {
 
 }
 
+void RTSP::entry() {
+    char* data = rtsp_sock_->recv_buf->getBuf();
+    // FOR DEBUG
+    cerr << data << endl;
+    int len = rtsp_sock_->recv_buf->getSize();
+    if ( !split_line(data, len) ){
+        cerr << "split_line() Error!" << endl;
+        return;
+    }
+    parser_request_line();
+    parser_headers();
+    show();
+}
+
+void RTSP::show(){
+    cout << "CSeq: " << CSeq_ << endl;
+    cout << "Type: " << type_ << endl;
+    cout << "Version: " << version_ << endl;
+    for (auto Iter = headers_.begin(); Iter != headers_.end(); Iter ++ ){
+        cout << Iter->first << ": " << Iter->second << endl;
+    }
+}
+
 
 void RTSP::loop() {
     while ( !isQuit_ ){
+        cout << "loop again!!!!!!!!!!!!!!" << endl;
         if ( !rtsp_sock_->Recv() ){
             // 失败
             cerr << "Recv() Error! " << endl;
@@ -43,7 +67,7 @@ void RTSP::loop() {
             cout << "remote closed sock!" << endl;
         }
         // 正常解析
-        char* target = rtsp_sock_->recv_buf->getBuf();
+        entry();
 
     }
 }
@@ -82,13 +106,14 @@ bool RTSP::split_line(char* data, int len) {
         return false;
     split_line_.clear();
     char* pre = data;
-    for (int i=0; i<len; i++){
-        if (data[i] == '\r' || data[i] == '\n'){
+    for (int i=0; i<len-1; i++){
+        if (data[i] == '\r' && data[i+1] == '\n'){
             data[i] = '\0';
-            if (i != len-1){ // 最后一个不需要加入到ret中
-                split_line_.push_back(pre);
-                pre = data + i + 1; // 移动pre指针到下一个需要添加到字符串首
-            }
+            data[i + 1] == '\0';
+            if ( i >= len - 2)
+                break;
+            split_line_.push_back(pre);
+            pre = data + i + 2;
         }
     }
     return true;
@@ -116,6 +141,7 @@ bool RTSP::parser_headers(){
         return false;
     for (int i=1; i<split_line_.size(); i++){
         char* line = split_line_[i];
+        //cout << i << ": " << line << endl;
         char* first = line;
         char* second = nullptr;
         for (char* tmp = line; *tmp != '\0' ;tmp ++){
@@ -128,9 +154,15 @@ bool RTSP::parser_headers(){
         if ( strncasecmp(first, "CSeq", 4) == 0 ){
             CSeq_ = atoi(second);
         }else{
+            if ( !first || !second ){
+                cerr << "got nullptr!!!" << endl;
+                continue;
+            }
             headers_.insert(Header(string(first), string(second)));
         }
     }
+    //exit(-2);
+    return true;
 }
 
 

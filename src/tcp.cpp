@@ -72,6 +72,7 @@ int Tcp::Accept() {
 
 bool Tcp::Recv() {
     int len = ::read(clientSock_, recv_buf->getBuf(), recv_buf->getCapacity());
+    cout << "got len: " << len << endl;
     if ( len < 0 ){
         // error
         cerr << "::read() Error!" << endl;

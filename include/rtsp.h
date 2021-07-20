@@ -33,6 +33,7 @@ public:
     bool split_line(char* data, int len);       // 将\r\n替换成\0\0
     void charOption2Type(char* target);         // 将char类型的option转为Type类型
     bool parser_headers();                      // 解析头字段
+    void show();                                // For Debug
 
 
 private:
