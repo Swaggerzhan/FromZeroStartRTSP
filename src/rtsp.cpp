@@ -6,10 +6,13 @@
 #include "../include/tcp.h"
 #include "../include/udp.h"
 #include "../include/Buffer.h"
+#include <cstring>
 
 using std::cerr;
 using std::cout;
 using std::endl;
+using std::vector;
+using std::string;
 
 RTSP::RTSP(Tcp* rtsp_sock, Udp* rtp_sock, Udp* rtcp_sock)
 :   rtsp_sock_(rtsp_sock),
@@ -45,6 +48,90 @@ void RTSP::loop() {
     }
 }
 
+RTSP::Type RTSP::parser_request_line() {
+    if ( split_line_.empty() )
+        return Error;
+    char* request_line = split_line_[0];
+    char* options = request_line;
+    for (char *tmp = options; ;tmp ++){
+        if ( *tmp == '\t' || *tmp == ' '){
+            *tmp = '\0';
+            request_line = tmp + 1;
+            break;
+        }
+    }
+    char* url = request_line;
+    char* version = nullptr;
+    for (char *tmp = url; ;tmp ++){
+        if ( *tmp == '\t' || *tmp == ' '){
+            *tmp = '\0';
+            version = tmp + 1;
+            break;
+        }
+    }
+    if ( !options || !url || !version)
+        return Error;
+    url_ = string(url);
+    version_ = string(version);
+    charOption2Type(options);
+    return type_;
+}
+
+bool RTSP::split_line(char* data, int len) {
+    if ( !data )
+        return false;
+    split_line_.clear();
+    char* pre = data;
+    for (int i=0; i<len; i++){
+        if (data[i] == '\r' || data[i] == '\n'){
+            data[i] = '\0';
+            if (i != len-1){ // 最后一个不需要加入到ret中
+                split_line_.push_back(pre);
+                pre = data + i + 1; // 移动pre指针到下一个需要添加到字符串首
+            }
+        }
+    }
+    return true;
+}
+
+
+void RTSP::charOption2Type(char* target) {
+    if ( strncasecmp(target, "OPTIONS", 7) == 0 ){
+        type_ = Options;
+        return;
+    }else if ( strncasecmp(target, "DESCRIBE", 8) == 0 ){
+        type_ = Desc;
+        return;
+    }else if ( strncasecmp(target, "SETUP", 5) == 0 ){
+        type_ = Setup;
+        return;
+    }else if ( strncasecmp(target, "PLAY", 4) == 0 ){
+        type_ = Play;
+        return;
+    }
+}
+
+bool RTSP::parser_headers(){
+    if ( split_line_.empty() )
+        return false;
+    for (int i=1; i<split_line_.size(); i++){
+        char* line = split_line_[i];
+        char* first = line;
+        char* second = nullptr;
+        for (char* tmp = line; *tmp != '\0' ;tmp ++){
+            if ( *tmp == ':' || *tmp == '\t' || *tmp == ' '){
+                *tmp = '\0';
+                second = tmp + 1;
+            }
+
+        }
+        if ( strncasecmp(first, "CSeq", 4) == 0 ){
+            CSeq_ = atoi(second);
+        }else{
+            headers_.insert(Header(string(first), string(second)));
+        }
+    }
+}
 
 
 

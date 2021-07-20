@@ -12,7 +12,6 @@ Buffer::Buffer(int capacity)
     length_(0)
 {
     buf_ = new char[capacity_];
-
 }
 
 Buffer::~Buffer() {
