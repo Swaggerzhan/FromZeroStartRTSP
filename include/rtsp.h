@@ -11,6 +11,32 @@
 class Tcp;
 class Udp;
 
+
+struct RtpHeader{
+
+    /* byte 0 */
+    uint8_t csrcLen:4;
+    uint8_t extension:1;
+    uint8_t padding:1;
+    uint8_t version:2;
+
+    /* byte 1 */
+    uint8_t payload:7;
+    uint8_t marker:1;
+
+    /* byte 2 3 */
+    uint16_t seq;       // 序列号
+
+    /* byte 4-7 */
+    uint32_t timestamp;
+};
+
+struct RtpPacket{
+    struct RtpHeader header;
+    uint8_t payload[0];
+};
+
+
 class RTSP{
 public:
 

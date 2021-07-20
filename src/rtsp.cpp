@@ -56,7 +56,7 @@ void RTSP::show(){
 
 void RTSP::loop() {
     while ( !isQuit_ ){
-        cout << "loop again!!!!!!!!!!!!!!" << endl;
+        //cout << "loop again!!!!!!!!!!!!!!" << endl;
         if ( !rtsp_sock_->Recv() ){
             // 失败
             cerr << "Recv() Error! " << endl;
@@ -65,6 +65,7 @@ void RTSP::loop() {
         // 判断是close还是正常回复
         if (rtsp_sock_->recv_buf->getSize() == 0){
             cout << "remote closed sock!" << endl;
+            isQuit_ = true;
         }
         // 正常解析
         entry();

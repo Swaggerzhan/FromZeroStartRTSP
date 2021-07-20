@@ -78,11 +78,12 @@ bool Tcp::Recv() {
         cerr << "::read() Error!" << endl;
         return false;
     }
+    recv_buf->setSize(len);
     if ( len == 0 ){
         // close
+        close(clientSock_);
         return true;
     }
-    recv_buf->setSize(len);
     return true;
 
 }
