@@ -168,3 +168,48 @@ bool RTSP::parser_headers(){
 
 
 
+void RTSP::respond(Type types) {
+    if ( types == Error )
+        return;
+    char* buf = rtsp_sock_->send_buf->getBuf();
+
+    switch (types) {
+        case Options: {
+            sprintf(buf, "RTSP/1.0 200 OK\r\n"
+                          "CSeq: %d\r\n"
+                          "Public: OPTIONS, DESCRIBE, SETUP, PLAY\r\n"
+                          "\r\n",
+                    CSeq_);
+            break;
+        }
+        case Desc: {
+            char* sdp = new char[1024];
+            sprintf(sdp, "v=0\r\n"
+                         "o=- 9%ld 1 IN IP4 %s\r\n"
+                         "t=0 0\r\n"
+                         "a=control:*\r\n"
+                         "m=video 0 RTP/AVP 96\r\n"
+                         "a=rtpmap:96 H264/90000\r\n"
+                         "a=control:track0\r\n",
+                    time(NULL), rtsp_sock_->getAddr());
+            sprintf(buf, "RTSP/1.0 200 OK\r\n"
+                          "CSeq: %d\r\n"
+                          "Content-Base: %s\r\n"
+                          "Content-type: application/sdp\r\n"
+                          "Content-length: %d\r\n\r\n"
+                          "%s",
+                    CSeq_,
+                    url_.c_str(),
+                    strlen(sdp),
+                    sdp);
+            delete [] sdp;
+            break;
+        }
+        case Setup: {
+
+        }
+    }
+}
+
+
+

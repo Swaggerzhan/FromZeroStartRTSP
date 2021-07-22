@@ -16,6 +16,7 @@ public:
     ~Tcp();
 
     int Accept();
+    char* getAddr() const;
 
     // 暂时开放
     Buffer* recv_buf;

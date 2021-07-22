@@ -62,6 +62,13 @@ public:
     void show();                                // For Debug
 
 
+    ///////////////////////////////////////////////////////////////
+    /// 响应部分
+
+    void respond(Type types);
+
+
+
 private:
 
     std::vector<char*> split_line_;         // 分行后的数据

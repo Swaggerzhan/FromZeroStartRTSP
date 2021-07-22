@@ -56,6 +56,11 @@ void Tcp::errorCheck(int code, string msg) {
     }
 }
 
+char* Tcp::getAddr() const {
+    return const_cast<char*>(addr_.c_str());
+    //return (char*)addr_.c_str();
+}
+
 
 int Tcp::Accept() {
 
