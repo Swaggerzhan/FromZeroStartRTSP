@@ -337,5 +337,115 @@ void RTSP::loadRespond(Type types) {
     }
 }
 
+//////////////////////////////////////////////////////////////
+/// 封包部分
+
+bool RTSP::check3(char* buf) {
+    if ( buf[0] == 0 && buf[1] == 0 && buf[2] == 1)
+        return true;
+    return false;
+}
+
+bool RTSP::check4(char* buf){
+    if (buf[0] == 0 && buf[1] == 0 && buf[2] == 0 && buf[3] == 1)
+        return true;
+    return false;
+}
+
+void RTSP::rtpPacketInit(struct RtpPacket *rtpPacket, uint8_t version, uint8_t extend,
+        uint8_t padding, uint8_t csrcLen, uint8_t marker, uint8_t payloadType,
+        uint16_t seq, uint32_t timestamp, uint32_t ssrc)
+{
+    /* 1 bytes */
+    rtpPacket->header.csrcLen = csrcLen;
+    rtpPacket->header.extension = extend;
+    rtpPacket->header.padding = padding;
+    rtpPacket->header.version = version;
+
+    /* 2 bytes */
+    rtpPacket->header.payloadType = payloadType;
+    rtpPacket->header.marker = marker;
+
+    /* 3 4 bytes */
+    rtpPacket->header.seq = seq;
+
+    /* 5 6 7 8 bytes */
+    rtpPacket->header.timestamp = timestamp;
+
+    /* 9 10 11 12 bytes */
+    rtpPacket->header.ssrc = ssrc;
+    // 初始化完毕
+}
+
+
+int RTSP::readH264Frame(int fd, char *frame) {
+    if ( fd < 0 ){
+        cerr << "readH264Frame() fd Error!" << endl; // for debug
+        return -1;
+    }
+    int ReadSize = ::read(fd, frame, 0x10000);
+    if (ReadSize < 0 ){
+        cerr << "readH264Frame() ::read() Error!" << endl; // for debug
+        return -1;
+    }
+    if ( !check3(frame) && !check4(frame)){
+        cerr << "could not find NALU" << endl; // for debug
+        return -1;
+    }
+    int frameSize;
+    /* 需要跳过当前的Nalu分割00 00 01 */
+    char* nextNalu = getNextNalu(frame + 3, ReadSize - 3);
+    if ( nextNalu == nullptr ){ // 已经没有下一个Nalu了，那么从头再来
+        lseek(fd, 0, SEEK_SET);
+        frameSize = ReadSize;
+    } else {
+        frameSize = nextNalu - frame; // 得到当前Nalu的长度
+        /* frameSize-ReadSize得到相差于ReadSize的长度，为负数，通过相减使下次重新读取时在新的Nalu位置 */
+        lseek(fd, (frameSize-ReadSize), SEEK_CUR);
+    }
+    return frameSize;
+
+}
+
+
+char* RTSP::getNextNalu(char *frame, int len) {
+    if (!frame)
+        return nullptr;
+
+    for (int i=0; i<len; i++){
+        if (check3(frame + i) || check4(frame + i))
+            return frame + i;
+    }
+
+    return nullptr;
+}
+
+
+void RTSP::streamStart() {
+
+    struct RtpPacket *rtpPacket = static_cast<RtpPacket*>(malloc(0x10000));
+    char* frame = new char[0x10000];
+
+    rtpPacketInit(rtpPacket, 2, 0, 0, 0, 0,
+                  RTP_PAYLOAD_TYPE_H264, 0, 0, 0x11223344);
+
+    while (){
+        int frameSize = readH264Frame(video_fd_, frame);
+        if ( frameSize < 0 ){
+            cerr << "readH264Frame Error!" << endl; // for debug
+            continue;
+        }
+        int offset = -1;
+        if (check3(frame)) // 去掉开头的Nalu分隔符
+            offset = 3;
+        else
+            offset = 4;
+        frameSize -= offset;
+
+
+    }
+
+}
+
 
 

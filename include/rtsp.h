@@ -11,6 +11,35 @@
 class Tcp;
 class Udp;
 
+struct RtpHeader{
+
+    /* byte 0 */
+    uint8_t csrcLen:4;
+    uint8_t extension:1;
+    uint8_t padding:1;
+    uint8_t version:2;
+
+    /* byte 1 */
+    uint8_t payloadType:7;
+    uint8_t marker:1;
+
+    /* bytes 2,3 */
+    uint16_t seq;
+
+    /* bytes 4-7 */
+    uint32_t timestamp;
+
+    /* bytes 8-11 */
+    uint32_t ssrc;
+
+};
+
+struct RtpPacket{
+    struct RtpHeader header{};
+    uint8_t payload[0];
+};
+
+
 
 
 class RTSP{
@@ -46,6 +75,49 @@ public:
 
     void respond(Type types);
     void loadRespond(Type types);                // 填充响应
+
+
+
+    //////////////////////////////////////////////////////////////
+    /// 封包部分
+    /**
+     * check3检测00 00 01状态的NALU
+     **/
+    bool check3(char* buf);
+
+    /**
+     *  check4检测00 00 00 01状态的NALU
+     **/
+    bool check4(char* buf);
+
+    /**
+     *  初始化RTP包
+     **/
+    void rtpPacketInit(struct RtpPacket* rtpPacket, uint8_t version,
+            uint8_t extend, uint8_t padding, uint8_t csrcLen,
+            uint8_t marker, uint8_t payloadType, uint16_t seq,
+            uint32_t timestamp, uint32_t ssrc);
+
+    /**
+     *  找到当前帧的下一个开始指针
+     **/
+    char* getNextNalu(char* frame, int len);
+
+    /**
+     *  从H264中读取帧
+     *  @param fd h264文件
+     *  @param frame 帧存储位置
+     *  @return 返回读取一帧大小，即NALU长度
+     **/
+    int readH264Frame(int fd, char* frame);
+
+    void sendRtpFrame(int fd, char* addr, int port,
+                      struct RtpPacket* rtpPacket, char* frame, int frameSize);
+
+    /**
+     *  流开始
+     **/
+    void streamStart();
 
 
 
