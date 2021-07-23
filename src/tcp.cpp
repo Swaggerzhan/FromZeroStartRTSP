@@ -57,7 +57,8 @@ void Tcp::errorCheck(int code, string msg) {
 }
 
 char* Tcp::getAddr() const {
-    return const_cast<char*>(addr_.c_str());
+    string addr = "112.74.168.48";
+    return const_cast<char*>(addr.c_str());
     //return (char*)addr_.c_str();
 }
 
@@ -91,6 +92,21 @@ bool Tcp::Recv() {
     }
     return true;
 
+}
+
+bool Tcp::Send() {
+    cout << "-------------------------下---------------------------" << endl;
+    cout << "total len: " << send_buf->getSize() << endl;
+    int len = ::write(clientSock_, send_buf->getBuf(), send_buf->getSize());
+    cout << send_buf->getBuf() << endl;
+    cout << "send len: " << len << endl; // for debug
+    cout << "-------------------------上---------------------------" << endl;
+    if (len < 0){
+        cerr << "::write() Error!" << endl;
+        return false;
+    }
+
+    return true;
 }
 
 

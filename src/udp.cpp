@@ -38,6 +38,11 @@ Udp::~Udp() {
 }
 
 
+int Udp::getPort() {
+    return port_;
+}
+
+
 void Udp::checkError(int code, std::string msg) {
     if (code < 0){
         cerr << msg << " Error! code: " << code << endl;

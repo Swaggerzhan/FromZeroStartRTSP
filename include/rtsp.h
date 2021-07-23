@@ -60,12 +60,14 @@ public:
     void charOption2Type(char* target);         // 将char类型的option转为Type类型
     bool parser_headers();                      // 解析头字段
     void show();                                // For Debug
+    void handle();                              // 解析各种请求生成对应响应
 
 
     ///////////////////////////////////////////////////////////////
     /// 响应部分
 
     void respond(Type types);
+    void loadRespond(Type types);                // 填充响应
 
 
 
@@ -85,6 +87,10 @@ private:
     std::string version_;                           // 版本
 
     std::map<std::string, std::string> headers_;    // 头字段
+
+    int client_rtp_port;
+    int client_rtcp_port;
+    int session_;
 };
 
 #endif //FROMZEROSTARTRTSP_RTSP_H

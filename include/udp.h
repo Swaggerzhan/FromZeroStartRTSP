@@ -13,6 +13,8 @@ public:
     Udp(std::string addr, int port);
     ~Udp();
 
+    int getPort();
+
 private:
 
     static void checkError(int code, std::string msg);

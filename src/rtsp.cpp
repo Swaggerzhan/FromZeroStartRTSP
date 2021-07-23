@@ -19,7 +19,8 @@ RTSP::RTSP(Tcp* rtsp_sock, Udp* rtp_sock, Udp* rtcp_sock)
     rtp_sock_(rtp_sock),
     rtcp_sock_(rtcp_sock),
     clientSock_(-1),
-    isQuit_(false)
+    isQuit_(false),
+    session_(66778899) // for debug
 {
     clientSock_ = rtsp_sock->Accept();
     cout << "RTSP got new Connection and Init OK! " << endl;
@@ -41,8 +42,60 @@ void RTSP::entry() {
     }
     parser_request_line();
     parser_headers();
-    show();
+    //show();
+    ///////// 以下就开始为解析部分
+    handle();
+
 }
+
+void RTSP::handle() {
+    if ( type_ == Error ){
+        // Error respond
+        cerr << "handle got Error" << endl;
+    }else if (type_ == Options){
+        loadRespond(Options);
+    }else if (type_ == Desc){
+        loadRespond(Desc);
+    }else if (type_ == Setup){
+        // 解析出客户端的UDP地址
+        auto it = headers_.find("Transport");
+        if (it == headers_.end() ){
+            cerr << "headers Transport didn't find!" << endl; // for debug
+            return;
+        }
+        // for debug
+        cout << "got headers: " << it->second << endl;
+        char* tmp_buf = new char[it->second.size()+1];
+        strcpy(tmp_buf, it->second.c_str());
+        char* client_port = nullptr;
+        cout << "tmp_buf: " << tmp_buf << endl;
+        if ((client_port = strstr(tmp_buf, "client_port=")) == nullptr ){
+            // for debug
+            cerr << "header Transport didn't find client port !" << endl;
+            return;
+        }
+        client_port += 12; // 去掉开头
+        char* rtcp_port = nullptr;
+        for (char* tmp=client_port; ;tmp++){
+            if ( *tmp == '\0' )
+                break;
+            if ( *tmp == '-' ){
+                *tmp = '\0';
+                rtcp_port = tmp + 1;
+                break;
+            }
+        }
+        client_rtp_port = atoi(client_port);
+        client_rtcp_port = atoi(rtcp_port);
+        // for debug
+        cout << "client_rtp_port: " << client_rtp_port << endl;
+        cout << "client_rtcp_port: " << client_rtcp_port << endl;
+        loadRespond(Setup);
+    }
+
+    rtsp_sock_->Send();
+}
+
 
 void RTSP::show(){
     cout << "CSeq: " << CSeq_ << endl;
@@ -168,7 +221,7 @@ bool RTSP::parser_headers(){
 
 
 
-void RTSP::respond(Type types) {
+void RTSP::loadRespond(Type types) {
     if ( types == Error )
         return;
     char* buf = rtsp_sock_->send_buf->getBuf();
@@ -180,6 +233,7 @@ void RTSP::respond(Type types) {
                           "Public: OPTIONS, DESCRIBE, SETUP, PLAY\r\n"
                           "\r\n",
                     CSeq_);
+            rtsp_sock_->send_buf->setSize(strlen(buf));
             break;
         }
         case Desc: {
@@ -202,11 +256,22 @@ void RTSP::respond(Type types) {
                     url_.c_str(),
                     strlen(sdp),
                     sdp);
+            rtsp_sock_->send_buf->setSize(strlen(buf));
             delete [] sdp;
             break;
         }
         case Setup: {
-
+            sprintf(buf, "RTSP/1.0 200 OK\r\n"
+                         "CSeq: %d\r\n"
+                         "Transport: RTP/AVP;unicast;client_port=%d-%d;server_port=%d-%d\r\n"
+                         "Session: %d\r\n"
+                         "\r\n",
+                        CSeq_, client_rtp_port, client_rtcp_port,
+                        rtp_sock_->getPort(), rtcp_sock_->getPort(),
+                        session_
+                    );
+            rtsp_sock_->send_buf->setSize(strlen(buf));
+            break;
         }
     }
 }
