@@ -12,30 +12,6 @@ class Tcp;
 class Udp;
 
 
-struct RtpHeader{
-
-    /* byte 0 */
-    uint8_t csrcLen:4;
-    uint8_t extension:1;
-    uint8_t padding:1;
-    uint8_t version:2;
-
-    /* byte 1 */
-    uint8_t payload:7;
-    uint8_t marker:1;
-
-    /* byte 2 3 */
-    uint16_t seq;       // 序列号
-
-    /* byte 4-7 */
-    uint32_t timestamp;
-};
-
-struct RtpPacket{
-    struct RtpHeader header;
-    uint8_t payload[0];
-};
-
 
 class RTSP{
 public:
@@ -52,6 +28,8 @@ public:
     RTSP(Tcp* rtsp_sock, Udp* rtp_sock, Udp* rtcp_sock);
 
     ~RTSP();
+
+    bool loadVideo();
 
     void loop();
     void entry();                               // RTSP解析入口
@@ -75,6 +53,8 @@ private:
 
     std::vector<char*> split_line_;         // 分行后的数据
 
+    int video_fd_;                                  // 视频文件fd
+
     Tcp* rtsp_sock_;
     Udp* rtp_sock_;
     Udp* rtcp_sock_;
@@ -91,6 +71,9 @@ private:
     int client_rtp_port;
     int client_rtcp_port;
     int session_;
+
+
+
 };
 
 #endif //FROMZEROSTARTRTSP_RTSP_H

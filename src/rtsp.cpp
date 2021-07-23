@@ -7,12 +7,30 @@
 #include "../include/udp.h"
 #include "../include/Buffer.h"
 #include <cstring>
+#include <fcntl.h>
+#include <unistd.h>
 
 using std::cerr;
 using std::cout;
 using std::endl;
 using std::vector;
 using std::string;
+
+const string fileDir = "/root/Video/";
+const string fileName = "out.264";
+
+
+bool RTSP::loadVideo() {
+    string targetFile = fileDir + fileName;
+    video_fd_ = open(targetFile.c_str(), O_RDONLY);
+    if (video_fd_ < 0 ){
+        cerr << "read file Error! " << endl; // for debug
+        return false;
+    }
+    return true;
+}
+
+
 
 RTSP::RTSP(Tcp* rtsp_sock, Udp* rtp_sock, Udp* rtcp_sock)
 :   rtsp_sock_(rtsp_sock),
@@ -23,6 +41,7 @@ RTSP::RTSP(Tcp* rtsp_sock, Udp* rtp_sock, Udp* rtcp_sock)
     session_(66778899) // for debug
 {
     clientSock_ = rtsp_sock->Accept();
+    loadVideo();
     cout << "RTSP got new Connection and Init OK! " << endl;
 }
 
@@ -91,9 +110,42 @@ void RTSP::handle() {
         cout << "client_rtp_port: " << client_rtp_port << endl;
         cout << "client_rtcp_port: " << client_rtcp_port << endl;
         loadRespond(Setup);
+    }else if (type_ == Play ){
+        loadRespond(Play);
+        cout << "start Play!!!" << endl; // for debug
     }
 
     rtsp_sock_->Send();
+    if ( type_ == Play ){
+        //// 先尝试在这个地方进行发送
+        struct RtpPacket* rtpPacket = (struct RtpPacket*)malloc(50000);
+        uint8_t* frame = (uint8_t*)malloc(50000);
+        rtpHeaderInit(rtpPacket, 0, 0, 0, RTP_VERSION, RTP_PAYLOAD_TYPE_H264, 0,
+                      0, 0, 0x88923423);
+        uint32_t frameSize;
+        int startCode;
+
+        while ( true ){
+            frameSize = getFrameFromH264File(video_fd_, (char*)frame, 50000);
+            if (frameSize < 0 ){
+                cerr << "read Error! " << endl;
+                continue;
+            }
+            if ( check3((char*)frame) )
+                startCode = 3;
+            else
+                startCode = 4;
+
+            frameSize -= startCode;
+            rtp_sock_->rtpSendH264Frame(rtp_sock_->getFd(),
+                                        rtsp_sock_->getRemoteAddr().c_str(),
+                                        client_rtp_port, rtpPacket, frame+startCode, frameSize);
+            rtpPacket->header.timestamp += 90000 / 25;
+            usleep( 1000 * 1000 / 25);
+        }
+        free(rtpPacket);
+        free(frame);
+    }
 }
 
 
@@ -270,6 +322,15 @@ void RTSP::loadRespond(Type types) {
                         rtp_sock_->getPort(), rtcp_sock_->getPort(),
                         session_
                     );
+            rtsp_sock_->send_buf->setSize(strlen(buf));
+            break;
+        }
+        case Play: {
+            sprintf(buf, "RTSP/1.0 200 OK\r\n"
+                         "CSeq: %d\r\n"
+                         "Range: npt=0.000-\r\n"
+                         "Session: %d; timeout=60\r\n"
+                         "\r\n", CSeq_, session_);
             rtsp_sock_->send_buf->setSize(strlen(buf));
             break;
         }

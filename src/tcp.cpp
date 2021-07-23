@@ -62,6 +62,9 @@ char* Tcp::getAddr() const {
     //return (char*)addr_.c_str();
 }
 
+string Tcp::getRemoteAddr() {
+    return remoteAddr_;
+}
 
 int Tcp::Accept() {
 
@@ -69,6 +72,8 @@ int Tcp::Accept() {
     memset(&remoteAddr, 0, sizeof(remoteAddr));
     socklen_t remoteAddrSz = sizeof(remoteAddr);
     int sock = ::accept(listenfd_, (sockaddr*)&remoteAddr, &remoteAddrSz);
+    cout << "got client addr: " << inet_ntoa(remoteAddr.sin_addr) << endl;
+    remoteAddr_ = inet_ntoa(remoteAddr.sin_addr);
     errorCheck(sock, "accept()");
     clientSock_ = sock;
     return sock;

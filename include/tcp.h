@@ -17,6 +17,7 @@ public:
 
     int Accept();
     char* getAddr() const;
+    std::string getRemoteAddr();
 
     // 暂时开放
     Buffer* recv_buf;
@@ -33,6 +34,8 @@ private:
     int port_;
     int listenfd_;
     int clientSock_;
+
+    std::string remoteAddr_;
 
 };
 
